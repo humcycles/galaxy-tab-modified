@@ -1,0 +1,264 @@
+# arch/arm/mach-s5pv210/Kconfig
+#
+# Copyright (c) 2010 Samsung Electronics Co., Ltd.
+#		http://www.samsung.com/
+#
+# Licensed under GPLv2
+
+# Configuration options for the S5PV210/S5PC110
+
+if ARCH_S5PV210
+
+config CPU_S5PV210
+	bool
+	select PLAT_S5P
+	select S5PV210_PM if PM
+	help
+	  Enable S5PV210 CPU support
+
+choice
+	prompt "Select machine type"
+	depends on ARCH_S5PV210
+	default MACH_SMDKV210
+
+config MACH_SMDKV210
+	bool "SMDKV210"
+	select CPU_S5PV210
+	select ARCH_SPARSEMEM_ENABLE
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC1 if !S5PV210_SD_CH0_8BIT
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3 if !S5PV210_SD_CH2_8BIT
+	select S5PV210_SETUP_SDHCI
+	select PCI
+	help
+	  Machine support for Samsung SMDKV210
+
+config MACH_SMDKC110
+	bool "SMDKC110"
+	select CPU_S5PV210
+	select DISCONTIGMEM
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC1 if !S5PV210_SD_CH0_8BIT
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3 if !S5PV210_SD_CH2_8BIT
+	select S5PV210_SETUP_SDHCI
+	select ARCH_DISCONTIGMEM_ENABLE
+	select PCI
+	help
+	  Machine support for Samsung SMDKC110
+	  S5PC110(MCP) is one of package option of S5PV210
+
+
+endchoice
+
+
+config MACH_S5PC110_P1
+        bool "S5PC110_P1"
+        select CPU_S5PV210
+        select DISCONTIGMEM
+        select S3C_DEV_HSMMC
+        select S3C_DEV_HSMMC1
+        select S3C_DEV_HSMMC2
+        select S3C_DEV_HSMMC3
+        select S5PV210_SETUP_SDHCI
+        select ARCH_DISCONTIGMEM_ENABLE
+        select PCI
+        help
+          Machine support for Samsung S5PC110_P1 
+
+choice
+	prompt "CPU revision"
+	depends on CPU_S5PV210
+	default CPU_S5PV210_EVT1
+
+config CPU_S5PV210_EVT0
+	bool "EVT0"
+	help
+	  Support EVT0
+
+config CPU_S5PV210_EVT1
+	bool "EVT1"
+	help
+	  Support EVT1
+endchoice
+
+
+choice
+	prompt "TARGET LOCALE"
+	default TARGET_LOCALE_EUR
+
+config TARGET_LOCALE_EUR
+	bool "EUR"
+	help
+	  Support Europe Board
+
+config TARGET_LOCALE_KOR
+	bool "KOR"
+	help
+	  Support Korea Board
+
+config TARGET_LOCALE_VZW
+	bool "VZW"
+	help
+	  Support VZW Board
+
+config TARGET_LOCALE_HKTW
+	bool "HKTW"
+	help
+	  Support HKTW Board
+	  
+config TARGET_LOCALE_HKTW_FET
+	bool "HKTW_FET"
+	help
+	  Support HKTW_FET Board
+	  
+config TARGET_LOCALE_USAGSM
+	bool "USAGSM"
+	help
+	  Support USAGSM Board
+	  
+endchoice
+
+config TARGET_LOCALE_LTN
+	bool "LTN"
+	default n
+	help
+	  Support LTN Board
+	  
+config TARGET_LOCALE_NTT
+	bool "LOCALE JAPAN NTT"
+	default n
+	help
+	  Support NTT Board
+
+config DDR_CONFIG_4G
+  bool "4G-4G-1G memory setting"
+  default y
+  help
+    Support 4G setting for P1 project
+
+config DM9000_16BIT
+	bool "DM9000 16-bit"
+	depends on MACH_SMDKV210 || MACH_VOGUEV210
+	default n
+	help
+	  Support DM9000 ethernet controller with 16bit data bus
+
+config S5PV210_PM
+	bool
+	help
+	  Power Management code common to S5PV210
+
+config PM_PWR_GATING
+  bool
+  default y
+  help
+    Support Power Gating
+    
+config S5PV210_SETUP_SDHCI
+	bool
+	depends on PLAT_S5P
+	default y
+	help
+	  Internal helper functions for S5PCV210 based SDHCI systems
+
+comment "MMC/SD slot setup"
+depends on PLAT_S5P
+
+menu "Use 8-bit bus width"
+config S5PV210_SD_CH0_8BIT
+bool "Channel 0"
+depends on PLAT_S5P
+default n
+help
+IF channel 0 uses 8-bit bus, channel 1 is disabled.
+
+config S5PV210_SD_CH2_8BIT
+bool "Channel 2"
+depends on PLAT_S5P
+default n
+help
+IF channel 2 uses 8-bit bus, channel 3 is disabled.
+endmenu
+
+# platform specific device setup
+config S5PV210_SETUP_FB
+        bool
+        depends on FB_S3C
+        default y
+        help
+          Common setup code for FIMD controller.
+
+config S5PV210_ADCTS
+	bool "S5PV210 ADCTS Driver"
+	default y
+	help
+	  Common setup code for adc and touchscreen
+
+config S5PV210_SETUP_FIMC0
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for FIMC controller 0.
+
+config S5PV210_SETUP_FIMC1
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for FIMC controller 1.
+
+config S5PV210_SETUP_FIMC2
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for FIMC controller 2.
+
+config S5PV210_SETUP_CSIS
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for MIPI-CSIS
+
+config S5PV210_SCLKFIMD_USE_VPLL
+        bool "Use VPLL for FIMD sclk source"
+        depends on FB_S3C
+        default n
+        help
+          Sclk fimd source use vpll, otherwise use mpll.
+
+choice
+	prompt "Target Pixel clock setting"
+	depends on FB_S3C
+	default TARGET_PCLK_54
+
+config TARGET_PCLK_44_46
+	bool "44.46Mhz"
+	help
+	  Support 44.46Mhz
+
+config TARGET_PCLK_47_6
+	bool "47.6Mhz"
+	help
+	  Support 47.6Mhz
+
+config TARGET_PCLK_54
+	bool "54Mhz"
+	help
+	  Support 54Mhz
+
+endchoice
+
+endif
+
+config SEC_HEADSET
+        tristate "SEC 2 Wire detection driver"
+        default y
+        help
+         Provides support for detecting SEC 2 wire devices, such as wired
+         headset.
+
