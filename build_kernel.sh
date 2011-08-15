@@ -26,7 +26,7 @@ fi
 
 TARGET_LOCALE="vzw"
 
-TOOLCHAIN=/opt/toolchains/arm-2009q3/bin/
+TOOLCHAIN=/home/kevin/Packages/arm-2009q3/bin
 TOOLCHAIN_PREFIX=arm-none-linux-gnueabi-
 
 KERNEL_BUILD_DIR=`pwd`/Kernel
@@ -54,7 +54,7 @@ BUILD_MODULE()
 	echo
 
 	pushd Kernel
-		make ARCH=arm modules
+	make -j$CPU_JOB_NUM ARCH=arm CROSS_COMPILE=$TOOLCHAIN/$TOOLCHAIN_PREFIX modules
 	popd
 }
 
@@ -70,7 +70,7 @@ BUILD_KERNEL()
 
 	export KDIR=`pwd`
 
-	make ARCH=arm p1_android_rfs_vzw_defconfig
+	# make ARCH=arm p1_android_rfs_vzw_defconfig
 
 	# make kernel
 
@@ -117,6 +117,7 @@ START_TIME=`date +%s`
 
 PRINT_TITLE
 
+BUILD_MODULE
 BUILD_KERNEL
 END_TIME=`date +%s`
 let "ELAPSED_TIME=$END_TIME-$START_TIME"
