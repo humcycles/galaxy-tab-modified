@@ -83,7 +83,7 @@ extern int smb136_set_otg_mode(int enable);
 __inline__ int get_otg_port_status(const u8 port, char *status)
 {
 	//return root_hub_feature(port, GetPortStatus, NULL, status);
-#if 1 // for debug
+#if 0 // for debug
 	hprt_t hprt;
 
 	hprt.d32 = read_reg_32(HPRT);
@@ -340,6 +340,14 @@ __inline__ int root_hub_feature(const u8 port,
 			case USB_PORT_FEAT_C_CONNECTION:
 				otg_dbg(OTG_DBG_ROOTHUB, 
 					"case ClearPortFeature -USB_PORT_FEAT_C_CONNECTION \n");
+				/*
+				// Now that the kernel has acked our loss of connection, we need to reset the port so it will
+				// be ready to detect the _next_ connection
+				otg_dbg(OTG_DBG_ROOTHUB, "kevinh Reenabling the port\n");
+				reset_and_enable_port(0);
+				port_flag.g.port_enable_change = 1; // tell the kernel enable has now changed
+				*/
+
 				/* Clears drivers internal connect status change
 				 * flag */
 				port_flag.b.port_connect_status_change = 0;
@@ -459,7 +467,10 @@ __inline__ int root_hub_feature(const u8 port,
 			 *((__le32*)buf) = cpu_to_le32(port_status);
 			//break;
 		}
-		
+		else
+			otg_dbg(OTG_DBG_ROOTHUB, 
+				"case GetPortStatus - connected \n");
+
 		
 		hprt.d32 = read_reg_32(HPRT);
 
@@ -656,13 +667,17 @@ int bus_resume(void)
 	mdelay(50);
 	if(oci_init() == USB_ERR_SUCCESS)
 	{
+	        otg_dbg(OTG_DBG_ROOTHUB, 
+			"OTG Init Success\n");
 		if(oci_start() == USB_ERR_SUCCESS)
 		{
 			otg_dbg(OTG_DBG_ROOTHUB, 
-				"OTG Init Success\n");
+				"OTG Start Success\n");
 			return USB_ERR_SUCCESS;
 		}
 	}
+	
+	otg_dbg(OTG_DBG_ROOTHUB, "OTG bus_resume fail\n");
 
 	return USB_ERR_FAIL;
 }

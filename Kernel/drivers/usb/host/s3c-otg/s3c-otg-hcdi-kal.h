@@ -184,8 +184,7 @@ otg_usbcore_giveback(td_t * td_p)
 {     
 	struct urb *urb_p = NULL;
 	
-	otg_dbg(OTG_DBG_OTGHCDI_KAL, 
-		"otg_usbcore_giveback \n");	
+	// otg_dbg(OTG_DBG_OTGHCDI_KAL,  "otg_usbcore_giveback \n");	
 
 	if (td_p->td_private == NULL)
 	{

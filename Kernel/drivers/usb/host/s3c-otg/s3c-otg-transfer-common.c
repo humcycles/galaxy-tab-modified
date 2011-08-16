@@ -717,7 +717,7 @@ int  	issue_transfer(ed_t 			*parent_ed,
 int  	cancel_transfer(ed_t 	*parent_ed,
 			td_t 	*cancel_td)
 {
-	int 		err = USB_ERR_DEQUEUED;
+	int 		err;
 	otg_list_head	*tmp_list_p, *tmp_list2_p;
 	bool		cond_found = false;
 
@@ -730,6 +730,7 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 		return cancel_td->error_code;
 	}	
 
+	// we blow up in the following loop sometimes when calling cancel_transfer from urb_dequeue - kevinh (called in interrupt context I think)
 	otg_list_for_each_safe(tmp_list_p, tmp_list2_p, &parent_ed->td_list_entry) {
 		if(&cancel_td->td_list_entry == tmp_list_p)
 		{
@@ -753,7 +754,7 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 		{
 			err = cancel_to_transfer_td(cancel_td);
 			
-			parent_ed->ed_status.in_transferring_td = 0;
+			parent_ed->ed_status.in_transferring_td = 0; // kevinh - I don't think this is needed, done in cancel_to_transfer_td
 			
 			if(err != USB_ERR_SUCCESS)
 			{
@@ -798,7 +799,8 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 		}		
 	}
 	// the caller of this functions should call otg_usbcore_giveback(cancel_td);	
-	cancel_td->error_code = USB_ERR_DEQUEUED;
+	// kevinh - fixed bug, err was getting corrupted by previous calls, make sure to set it
+	cancel_td->error_code = err = USB_ERR_DEQUEUED;
 	//otg_usbcore_giveback(cancel_td);
 	delete_td(cancel_td);
 

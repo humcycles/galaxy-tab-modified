@@ -51,11 +51,11 @@ __inline__ void otg_handle_interrupt(void)
 	gintsts_t	gintsts = {.d32 = 0};
 
 	gintsts.d32 = read_reg_32(GINTSTS) & read_reg_32(GINTMSK);
-	
+	/*
 	otg_dbg(OTG_DBG_ISR, 
 		"otg_handle_interrupt - GINTSTS=0x%8x\n",
 		gintsts.d32);
-	
+	*/
 	if (gintsts.b.wkupintr)
 	{
 		otg_dbg(OTG_DBG_ISR, 
@@ -65,8 +65,10 @@ __inline__ void otg_handle_interrupt(void)
 
 	if (gintsts.b.disconnect)
 	{
+	        unsigned hprt = read_reg_32(HPRT);
+
 		otg_dbg(OTG_DBG_ISR, 
-			"Disconnect  Interrupt\n");
+			"Disconnect Interrupt (HPRT=0x%x)\n", hprt);
 		port_flag.b.port_connect_status_change = 1;
 		port_flag.b.port_connect_status = 0;
 		clearIntr.b.disconnect = 1;
@@ -83,8 +85,8 @@ __inline__ void otg_handle_interrupt(void)
 	if (gintsts.b.hcintr)
 	{
 		//Mask Channel Interrupt to prevent generating interrupt
-		otg_dbg(OTG_DBG_ISR, 
-			"Channel Interrupt\n");
+		/* otg_dbg(OTG_DBG_ISR, 
+		   "Channel Interrupt\n"); */
 		if(!ch_halt)
 		{
 			do_transfer_checker();
@@ -290,9 +292,15 @@ void process_port_intr(void)
 	if(hprt.b.prtenchng)
 	{
 		otg_dbg(OTG_DBG_ISR, 
-			"port enable/disable changed\n");
+			"port enable/disable changed (and implicit disconnect)\n");
 
 		port_flag.b.port_enable_change = 1;
+
+		// kevinh - it seems the hw implicitly disables the interface on unplug, so mark that we are unplugged
+		if(!hprt.b.prtconnsts) {
+		  port_flag.b.port_connect_status_change = 1;
+		  port_flag.b.port_connect_status = 0;
+		}
 	}
 
 	if(hprt.b.prtovrcurrchng)

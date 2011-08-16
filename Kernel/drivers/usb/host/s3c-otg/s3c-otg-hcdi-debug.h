@@ -34,7 +34,7 @@ extern "C"
 {
 #endif
 
-//#define OTG_DEBUG
+#define OTG_DEBUG
 
 #ifdef OTG_DEBUG
 #if 0
@@ -42,14 +42,16 @@ extern "C"
 #endif
 
 #define OTG_DBG_OTGHCDI_DRIVER	true//false
-#define OTG_DBG_OTGHCDI_HCD	true//false
-#define OTG_DBG_OTGHCDI_KAL	true//false
+#define OTG_DBG_OTGHCDI_HCD	true 
+#define OTG_DBG_OTGHCDI_KAL	true 
 #define OTG_DBG_OTGHCDI_LIST	false
 #define OTG_DBG_OTGHCDI_MEM	false
 
 #define OTG_DBG_TRANSFER	true//false
-#define OTG_DBG_SCHEDULE	true//false
-#define OTG_DBG_OCI		true//false
+#define OTG_DBG_SCHEDULE        false // this breaks debugging
+#define OTG_DBG_SCHEDULE2       false 
+#define OTG_DBG_SCHEDULE3       false
+#define OTG_DBG_OCI		true
 #define OTG_DBG_DONETRASF	true//false
 #define OTG_DBG_ISR		true//false
 #define OTG_DBG_ROOTHUB		true//false

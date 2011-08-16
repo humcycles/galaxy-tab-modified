@@ -221,6 +221,9 @@ int  	insert_ed_to_scheduler(ed_t *insert_ed)
 	return USB_ERR_SUCCESS;
 }
 
+#define KHLOCK() unsigned long spin_lock_flag = 0; spin_lock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
+#define KHUNLOCK() spin_unlock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag)
+
 /******************************************************************************/
 /*! 
  * @name	int   	do_periodic_schedule(void)
@@ -242,10 +245,11 @@ void 	do_periodic_schedule(void)
 	int	err_sched = USB_ERR_SUCCESS;
 	u32	sched_cnt = 0;
 
-	otg_dbg(OTG_DBG_SCHEDULE,"*******Start to DoPeriodicSchedul*********\n");
-
 	sched_cnt = get_periodic_ready_q_entity_num();
 	
+	if(sched_cnt != 0)
+	  otg_dbg(OTG_DBG_SCHEDULE,"*******Start to DoPeriodicSchedul, cnt=%d *********\n", sched_cnt);
+
 	while(sched_cnt)
 	{
 
@@ -264,7 +268,7 @@ start_sched_perio_transfer:
 			td_t 		*td;
 			u32		cur_frame_num = 0;
 
-			otg_dbg(OTG_DBG_SCHEDULE,"the ed_t to be scheduled :%d",(int)scheduling_ed);
+			otg_dbg(OTG_DBG_SCHEDULE2,"the ed_t to be scheduled :%p\n",scheduling_ed);
 			sched_cnt--;
 			td_list_entry = 	scheduling_ed->td_list_entry.next;
 
@@ -293,7 +297,7 @@ start_sched_perio_transfer:
 			if((!td->is_transferring) && (!td->is_transfer_done))
 			{
 				u8			alloc_ch;		
-				otg_dbg(OTG_DBG_SCHEDULE,"the td_t to be scheduled :%d",(int)td);
+				otg_dbg(OTG_DBG_SCHEDULE2,"the td_t to be scheduled :%p\n",td);
 				alloc_ch 	=	oci_start_transfer(&td->cur_stransfer);				
 				if(alloc_ch<total_chnum_threshold)
 				{
@@ -323,6 +327,7 @@ start_sched_perio_transfer:
 			else
 			{	// the selected td_t was already transferring or completed to transfer.	
 				//we should decide how to control this case.
+			        printk("kevinh: scheduler found completed td\n");
 				goto end_sched_perio_transfer;
 			}
 
@@ -330,6 +335,8 @@ start_sched_perio_transfer:
 		}
 		else
 		{
+		        otg_dbg(OTG_DBG_SCHEDULE,"Ready queue empty");
+		        
 			// there is no ED on PeriodicTransferQ. So we finish scheduling.
 			goto end_sched_perio_transfer;
 		}
@@ -381,6 +388,8 @@ start_sched_nonperio_transfer:
 				otg_list_head	*td_list_entry;
 				td_t 		*td;
 			
+				otg_dbg(OTG_DBG_SCHEDULE3,"the ed_t to be scheduled :%p\n",scheduling_ed);
+
 				td_list_entry = 	scheduling_ed->td_list_entry.next;
 
 				//if(td_list_entry == &scheduling_ed->td_list_entry)
@@ -402,6 +411,8 @@ start_sched_nonperio_transfer:
 				{					
 					u8	alloc_ch;					
 				
+					otg_dbg(OTG_DBG_SCHEDULE3,"the td_t to be scheduled :%p\n",td);
+
 					alloc_ch =oci_start_transfer(&td->cur_stransfer);
 					
 					if(alloc_ch<total_chnum_threshold)

@@ -72,7 +72,7 @@ static const char	gHcdName[] = "EMSP_OTG_HCD";
 extern int otg_hcd_init_modules(void);
 extern void otg_hcd_deinit_modules(void);
 
-void otg_print_registers();
+void otg_print_registers(void);
 
 #ifdef __cplusplus 
 } 

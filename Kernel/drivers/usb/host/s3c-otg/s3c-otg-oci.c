@@ -102,6 +102,10 @@ int oci_core_init(void)
 	usbcfg.b.toutcal 		= 7;
 	usbcfg.b.forcehstmode 	= 1;
 	write_reg_32 (GUSBCFG, usbcfg.d32);
+	// per
+        // http://forum.xda-developers.com/showthread.php?t=709135&page=21
+	// we need a 25msec delay after setting this -kevinh
+	mdelay(100); 
 
 	otg_dbg(OTG_DBG_OCI, 
 		"after - GUSBCFG=0x%x, GOTGCTL=0x%x\n", 

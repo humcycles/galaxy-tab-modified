@@ -171,6 +171,7 @@ int  	cancel_to_transfer_td(td_t 	*cancel_td)
 	{
 		int err;
 		
+		printk("Cancel td %p, ch %d\n", cancel_td, cancel_td->cur_stransfer.alloc_chnum);
 		err = oci_stop_transfer(cancel_td->cur_stransfer.alloc_chnum);
 		
 		if(err == USB_ERR_SUCCESS)

@@ -92,8 +92,8 @@ irqreturn_t	s5pc110_otghcd_irq(struct usb_hcd *hcd)
 	
 	unsigned long	spin_lock_flag = 0;
 
-	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
-		"s5pc110_otghcd_irq \n");	
+	/* otg_dbg(OTG_DBG_OTGHCDI_HCD, 
+	   "s5pc110_otghcd_irq \n");	 */
 
 	spin_lock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
 	otg_handle_interrupt();	
@@ -266,8 +266,7 @@ s5pc110_otghcd_urb_enqueue
 	unsigned long	spin_lock_flag = 0;
 
 	spin_lock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
-	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
-		"s5pc110_otghcd_urb_enqueue \n");
+	otg_dbg(OTG_DBG_OTGHCDI_HCD, "s5pc110_otghcd_urb_enqueue %p\n", urb);
 	
 	/// check ep has ed_t or not
 	if(!(urb->ep->hcpriv))
@@ -468,6 +467,7 @@ s5pc110_otghcd_urb_enqueue
 		return USB_ERR_FAIL;
 	}
 	urb->hcpriv = (void *)return_td_addr;
+	otg_dbg(OTG_DBG_OTGHCDI_HCD, "exit s5pc110_otghcd_urb_enqueue %p, td=%p\n", urb, urb->hcpriv);
 
 	spin_unlock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
 	return USB_ERR_SUCCESS;
@@ -493,7 +493,7 @@ int		s5pc110_otghcd_urb_dequeue(struct usb_hcd *_hcd, struct urb *_urb, int stat
 	td_t *cancel_td = (td_t *)_urb->hcpriv;
 
 	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
-		"s5pc110_otghcd_urb_dequeue \n");	
+		"s5pc110_otghcd_urb_dequeue %p, td=%p\n", _urb, cancel_td);	
 
 	/* Dequeue should be performed only if endpoint is enabled */
 	if (_urb->ep->enabled == 0)
@@ -530,11 +530,14 @@ int		s5pc110_otghcd_urb_dequeue(struct usb_hcd *_hcd, struct urb *_urb, int stat
 		return USB_ERR_SUCCESS;
 	}
 
+	// kevinh - we die in here
 	ret_val = cancel_transfer(cancel_td->parent_ed_p, cancel_td);
 	if(ret_val != USB_ERR_DEQUEUED && ret_val != USB_ERR_NOELEMENT)
 	{
-		otg_err(OTG_DBG_OTGHCDI_HCD, 
-			"fail to cancel_transfer() \n");		
+	  // dump_stack(); // kevinh temp
+
+		otg_err(OTG_DBG_OTGHCDI_DRIVER, 
+			"fail to cancel_transfer = %d\n", ret_val);		
 		otg_usbcore_giveback(cancel_td);
 
 		spin_unlock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
