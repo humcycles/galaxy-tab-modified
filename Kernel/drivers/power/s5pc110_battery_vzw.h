@@ -299,6 +299,13 @@ typedef enum adc_channel {
 #define __SMB136_CHARGER_IC__
 #define __TEMP_BLOCK_EXCEPTION__
 
+#define CONFIG_SPRINT_BATTERY // kevinh
+
+#ifdef CONFIG_SPRINT_BATTERY
+#define FEATURE_SPRINT_SLATE
+#endif
+
+
 //#define __CHECK_CHG_CURRENT__
 //#define __TEMPERATURE_TEST__
 //#define __SOC_TEST__

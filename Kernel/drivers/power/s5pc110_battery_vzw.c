@@ -35,6 +35,8 @@
 #include <mach/regs-clock.h>
 #include <asm/gpio.h>
 
+#define DEBUG // kevinh
+
 #include "s5pc110_battery_vzw.h"
 
 static struct wake_lock vbus_wake_lock;
@@ -113,7 +115,7 @@ static void s3c_bat_status_update(struct power_supply *bat_ps);
 
 #define ADC_DATA_ARR_SIZE	6
 #define ADC_TOTAL_COUNT		10
-#define POLLING_INTERVAL	2000
+#define POLLING_INTERVAL	5000
 #ifdef __TEST_MODE_INTERFACE__
 #define POLLING_INTERVAL_TEST	1000
 #endif /* __TEST_MODE_INTERFACE__ */
@@ -295,10 +297,14 @@ unsigned int charging_mode_get(void)
 
 static int get_usb_power_state(void)
 {
+#if 1 // Mission/kevinh force ac charger detect
+  return 1;
+#else
 	if(curent_device_type==PM_CHARGER_USB_INSERT)
 		return 1;
 	else
 		return 0;
+#endif
 }	
 
 static inline int s3c_adc_get_adc_data_ex(int channel) {
@@ -1418,6 +1424,7 @@ static bool check_jig_cable(void)
 
 static bool check_samsung_charger(void)
 {
+#if 0 // kevinh/Mission - force charging if we see voltage
 	//1.Read ADC value
 	int adc_1, adc_2, vol_1, vol_2;
 	int i = 0;
@@ -1446,6 +1453,10 @@ static bool check_samsung_charger(void)
 	
 	FSA9480_ChangePathToAudio(FALSE);
 	return TRUE;
+#else
+	printk("Mission Motors forced hi-current charging\n");
+	return TRUE;
+#endif
 }
 
 
@@ -2969,8 +2980,8 @@ static void s3c_cable_check_status(void)
 		s3c_set_chg_en(0);
 	}
 __end__:
-	//dev_info(dev, "%s: gpio_chg_en %s\n", __func__, 
-	//	maxim_charging_enable_status()?"enabled":"disabled");
+	dev_info(dev, "%s: gpio_chg_en %s\n", __func__, 
+		maxim_charging_enable_status()?"enabled":"disabled");
 	s3c_cable_status_update(status);
 	mutex_unlock(&work_lock);
 }
