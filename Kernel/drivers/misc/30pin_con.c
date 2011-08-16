@@ -452,16 +452,17 @@ void acc_ID_intr_handle(struct work_struct *_work)
 		else if(0==acc_ID_val)
 		{
 			msleep(420); //workaround for jack
-			ACC_CONDEV_DBG("Accessory attached");
 			ACC_STATE = acc_ID_val;
 			adc_val = connector_detect_change();
+			ACC_CONDEV_DBG("Accessory attached");
 			acc_notified(adc_val);
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_RISING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
 		// check USB OTG Host ADC range...
-		if(adc_val > 2700 && adc_val < 2799) {
+			ACC_CONDEV_DBG("kevinh forcing USBOTG");
+		// kevinh hack if(adc_val > 2700 && adc_val < 2799) {
 			s3c_usb_cable(USB_OTGHOST_ATTACHED);
-		}
+			// }
 #endif
 		}
 	}
