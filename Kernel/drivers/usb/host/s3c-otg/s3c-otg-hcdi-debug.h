@@ -41,20 +41,20 @@ extern "C"
 #include <linux/stddef.h>
 #endif
 
-#define OTG_DBG_OTGHCDI_DRIVER	true//false
-#define OTG_DBG_OTGHCDI_HCD	true 
-#define OTG_DBG_OTGHCDI_KAL	true 
+#define OTG_DBG_OTGHCDI_DRIVER	false
+#define OTG_DBG_OTGHCDI_HCD	false // safe to turn on I think
+#define OTG_DBG_OTGHCDI_KAL	false
 #define OTG_DBG_OTGHCDI_LIST	false
 #define OTG_DBG_OTGHCDI_MEM	false
 
-#define OTG_DBG_TRANSFER	true//false
+#define OTG_DBG_TRANSFER	false
 #define OTG_DBG_SCHEDULE        false // this breaks debugging
 #define OTG_DBG_SCHEDULE2       false 
 #define OTG_DBG_SCHEDULE3       false
 #define OTG_DBG_OCI		false // too verbose
-#define OTG_DBG_DONETRASF	true//false
-#define OTG_DBG_ISR		true//false
-#define OTG_DBG_ROOTHUB		true//false
+#define OTG_DBG_DONETRASF	false
+#define OTG_DBG_ISR		false
+#define OTG_DBG_ROOTHUB		false
 
 #if defined(__linux__)
 

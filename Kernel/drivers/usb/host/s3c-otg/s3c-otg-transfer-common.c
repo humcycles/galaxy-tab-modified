@@ -153,14 +153,17 @@ int  	delete_ed(ed_t	*delete_ed)
 /******************************************************************************/
 int	delete_td(td_t *delete_td)
 {
-
 	if(delete_td->is_transferring)
 	{
 		//at this case, we should cancel the USB Transfer.
+
+	        // the ISR will call delete_td from release_trans_resource
+	        // which can cause redundant frees thus corrupting the heap
+	        // I think I've fixed this by only calling delete_td when I know it is safe 
 		cancel_to_transfer_td(delete_td);
 	}
-
 	otg_mem_free(delete_td);
+
 	return USB_ERR_SUCCESS;
 }
 
@@ -721,7 +724,6 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 	otg_list_head	*tmp_list_p, *tmp_list2_p;
 	bool		cond_found = false;
 
-
 	if(parent_ed == NULL || cancel_td == NULL)
 	{	
 		otg_dbg(OTG_DBG_TRANSFER, "parent_ed == NULL || cancel_td == NULL\n"); 
@@ -731,7 +733,9 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 	}	
 
 	// we blow up in the following loop sometimes when calling cancel_transfer from urb_dequeue - kevinh (called in interrupt context I think)
+	// is parent_ed crap?  or has something in the parent_ed list already been freed?
 	otg_list_for_each_safe(tmp_list_p, tmp_list2_p, &parent_ed->td_list_entry) {
+
 		if(&cancel_td->td_list_entry == tmp_list_p)
 		{
 			cond_found = true;
@@ -750,8 +754,10 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 	
 	if(cancel_td->is_transferring)
 	{
+	        //  Has it already been given to hardware?  If so, we can remove it now
 		if(!parent_ed->ed_status.is_in_transfer_ready_q)
 		{
+		        //printk("cancelling transaction in hw %p\n", cancel_td);
 			err = cancel_to_transfer_td(cancel_td);
 			
 			parent_ed->ed_status.in_transferring_td = 0; // kevinh - I don't think this is needed, done in cancel_to_transfer_td
@@ -764,9 +770,17 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 				goto ErrorStatus;
 			}
 
-			otg_list_pop(&cancel_td->td_list_entry);
-			parent_ed->num_td--;
+			//otg_list_pop(&cancel_td->td_list_entry);
+			//parent_ed->num_td--;
 		}
+		else {
+		  // printk("sitting in ready queue %p so we'll just yank it\n", cancel_td); // FIXME - could we be leaving this guy behind?
+		}
+
+		// kevinh - even if the record was in the ready queue it is important to delete it as well.  We can also always remove the ed from the scheduler
+		// once all tds have been removed
+		otg_list_pop(&cancel_td->td_list_entry);
+		parent_ed->num_td--;
 	}
 	else
 	{
@@ -781,7 +795,11 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 
 	if(parent_ed->num_td)
 	{
-		parent_ed->is_need_to_insert_scheduler = true;
+	        // kevinh - we do not want to force insert_scheduler, because if this endpoint _was_ already scheduled
+	        // because the deleted td was not the active td then we will now put ed into the scheduler list twice, thus
+	        // corrupting it.
+	        // parent_ed->is_need_to_insert_scheduler = true;
+
 		insert_ed_to_scheduler(parent_ed);
 	}
 	else
@@ -802,7 +820,9 @@ int  	cancel_transfer(ed_t 	*parent_ed,
 	// kevinh - fixed bug, err was getting corrupted by previous calls, make sure to set it
 	cancel_td->error_code = err = USB_ERR_DEQUEUED;
 	//otg_usbcore_giveback(cancel_td);
-	delete_td(cancel_td);
+	// kevinh - fixed bug, the caller should take care of calling delete_td because they might still want to do some
+	// operations on that memory
+	// delete_td(cancel_td);
 
 ErrorStatus:
 
@@ -836,7 +856,9 @@ int cancel_all_td(ed_t 	*parent_ed)
 		
 		cancel_td = otg_list_get_node(cancel_td_list_entry,td_t, td_list_entry);
 		
-		cancel_transfer(parent_ed, cancel_td);
+		if(cancel_transfer(parent_ed, cancel_td) == USB_ERR_DEQUEUED)
+		  // FIXME - do we also need to giveback?
+		  delete_td(cancel_td);
 	} while(parent_ed->num_td);
 
 	return USB_ERR_SUCCESS;

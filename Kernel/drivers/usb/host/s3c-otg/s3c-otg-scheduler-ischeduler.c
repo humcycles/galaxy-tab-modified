@@ -29,6 +29,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  ****************************************************************************/
 
+// This seems to be the the scheduler that is used when called from the isr
+
 #include "s3c-otg-scheduler-scheduler.h"
 
 void init_scheduler(void)
@@ -171,18 +173,28 @@ int  	cancel_to_transfer_td(td_t 	*cancel_td)
 	{
 		int err;
 		
-		printk("Cancel td %p, ch %d\n", cancel_td, cancel_td->cur_stransfer.alloc_chnum);
+		//printk("Cancel td %p, ch %d\n", cancel_td, cancel_td->cur_stransfer.alloc_chnum);
+		// dump_stack();
 		err = oci_stop_transfer(cancel_td->cur_stransfer.alloc_chnum);
 		
 		if(err == USB_ERR_SUCCESS)
 		{
+		        // unsigned int temp;
+			// u8 chnum = cancel_td->cur_stransfer.alloc_chnum;
 			set_transferring_td_array(cancel_td->cur_stransfer.alloc_chnum,0);
+
+			// gettdres = get_td_info(chnum, &temp);
+			//printk("Stopped transfer for td %p - alloc #%d, gettd=%d, tdres=%x\n", cancel_td, chnum, gettdres, temp);
 			
 			cancel_td->cur_stransfer.alloc_chnum 		= 	CH_NONE;
 			cancel_td->is_transferring 				= 	false;
 			cancel_td->parent_ed_p->ed_status.is_in_transferring	=	false;
 			cancel_td->parent_ed_p->ed_status.in_transferring_td	= 	0;
 			cancel_td->parent_ed_p->is_need_to_insert_scheduler	=	true;
+
+			// kevinh - important fix, needed to prevent accidentally rescheduling this td
+			// but when I include this though I see corrupted list in cancel_transfer
+			cancel_td->is_transfer_done 				= 	true;
 
 			if(cancel_td->cur_stransfer.ed_desc_p->endpoint_type == BULK_TRANSFER||
 				cancel_td->cur_stransfer.ed_desc_p->endpoint_type == CONTROL_TRANSFER )
@@ -193,6 +205,7 @@ int  	cancel_to_transfer_td(td_t 	*cancel_td)
 		}
 		else
 		{
+		  printk("cancel td failed\n");
 			return err;
 		}
 	}

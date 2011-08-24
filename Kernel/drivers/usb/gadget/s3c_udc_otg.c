@@ -477,6 +477,8 @@ int s3c_usb_cable(int connected)
 			break;
 #ifdef CONFIG_USB_S3C_OTG_HOST
 		case USB_OTGHOST_DETACHED:
+		        S3C_UDC_DBG("USB host mode cable detached...\n");
+		    
 			otg_clock_enable(0);
 			max8998_ldo3_8_control(0, LDO_USB);
 
@@ -501,11 +503,12 @@ int s3c_usb_cable(int connected)
 		case USB_OTGHOST_ATTACHED:
 			if(!atomic_read(&g_OtgHostMode))
 			{
+				S3C_UDC_DBG("USB Host mode cable attached\n");
 				fsa9480_enable_interrupt(0);
 				free_irq(IRQ_OTG, dev);
 
 				max8998_ldo3_8_control(1, LDO_USB);
-				mdelay(1);
+				mdelay(200); // kevinh, was 1 - but give a longer time for the LDO to power up
 				otg_clock_enable(1);
 
 				if (platform_driver_register(&s5pc110_otg_driver) < 0) 

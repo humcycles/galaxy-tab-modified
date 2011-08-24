@@ -82,7 +82,7 @@ void	do_transfer_checker (void)
 	
 	// Get value of HAINT...
 	get_intr_ch(&hc_intr,&hc_intr_msk);	
-	
+
 start_do_transfer_checker:
 	
 	while(do_try_cnt<MAX_CH_NUMBER)
@@ -95,16 +95,19 @@ start_do_transfer_checker:
 		}
 
 		//Gets the address of the td_t to have the channel to be interrupted.
-                if(!(get_td_info(do_try_cnt, &td_addr))) {
+                if(get_td_info(do_try_cnt, &td_addr) == USB_ERR_SUCCESS) {
 
                         done_td = (td_t *)td_addr;
 
                         if(do_try_cnt != done_td->cur_stransfer.alloc_chnum) {
+			        // printk("Ignoring because td #%d @%p has mismatching alloc #%d\n", do_try_cnt, done_td, done_td->cur_stransfer.alloc_chnum);
+
                                 do_try_cnt++;
                                 goto start_do_transfer_checker;
                         }
 
                 } else {
+		        // printk("Ignoring because td #%d no longer assigned\n", do_try_cnt);
                         do_try_cnt++;
                         goto start_do_transfer_checker;
                 }
@@ -156,7 +159,9 @@ start_do_transfer_checker:
 		}
 		
 		else if(proc_result==DE_ALLOCATE)
-		{			
+		{		
+		        //printk("ISR dealloc %p, ch# %d\n", done_td, do_try_cnt);
+
 			done_td->parent_ed_p->ed_status.is_in_transferring 	= 	false;
 			done_td->parent_ed_p->ed_status.in_transferring_td	=	0;
 			done_td->is_transfer_done				= 	true;
@@ -164,7 +169,8 @@ start_do_transfer_checker:
 			
 			otg_usbcore_giveback( done_td);			
 			release_trans_resource(done_td);
-
+			
+			// kevinh, I suspect that with my fixes the following nasty delay can be removed
 #ifdef CONFIG_CPU_S5PC100
 			udelay(20); /* TODO : remove timing delay */
 #else

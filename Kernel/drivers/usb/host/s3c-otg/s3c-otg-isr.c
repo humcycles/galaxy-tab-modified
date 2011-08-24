@@ -91,7 +91,7 @@ __inline__ void otg_handle_interrupt(void)
 		{
 			do_transfer_checker();
 		}
-		
+		// else printk("Ignoring hcintr because we are halting\n");
 	}
 
 	if (gintsts.b.portintr)
@@ -305,17 +305,17 @@ void process_port_intr(void)
 
 	if(hprt.b.prtovrcurrchng)
 	{
-		otg_dbg(OTG_DBG_ISR, 
-			"over current condition is changed\n");
-		
 		if(hprt.b.prtovrcurract)
 			{
 			otg_dbg(OTG_DBG_ISR, 
-				"port_over_current_change = 1\n");
+				"port_over_current = 1\n");
 			port_flag.b.port_over_current_change = 1;
 			}
 		else
 			{
+			otg_dbg(OTG_DBG_ISR, 
+				"port_over_current = 0\n");
+		
 			port_flag.b.port_over_current_change = 0;
 			}
 	}	

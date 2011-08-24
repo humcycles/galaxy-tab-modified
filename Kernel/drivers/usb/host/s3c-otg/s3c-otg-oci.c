@@ -155,8 +155,7 @@ int oci_core_init(void)
 				usbcfg.b.hnpcap = 1;
 				usbcfg.b.srpcap = 1;
 
-				otg_dbg("OTG_DBG_OCI : "
-					"use HNP and SRP \n");
+				otg_dbg(OTG_DBG_OCI, "OTG_DBG_OCI OP Mode : use HNP and SRP \n");
 				break;
 
 			case MODE_SRP_ONLY_CAPABLE:
@@ -427,24 +426,42 @@ int oci_stop_transfer(u8 ch_num)
 	hcintmsk.b.chhltd = 1;
 	update_reg_32(HCINTMSK(ch_num),hcintmsk.d32);
 
+	// clear all pending ints (so we can cehck for chhalt)
+	write_reg_32(HCINT(ch_num),INT_ALL);
+
+	// Ask to halt channel
 	hcchar.b.chdis = 1;
-	hcchar.b.chen = 1;
+	hcchar.b.chen = 1; 
 	update_reg_32(HCCHAR(ch_num),hcchar.d32);
 
-	//wait for  Channel Disabled Interrupt
+	//wait for  Channel clear to start
 	do {
 		hcchar.d32 = read_reg_32(HCCHAR(ch_num));
 		
 		if(count > max_error_count) {
-			otg_dbg(OTG_DBG_OCI, 
-				"Warning!! oci_stop_transfer()"
-				"ChDis is not cleared! ch=%d, hcchar=0x%x\n",
+			printk(
+				"Warning!! ChDis is not cleared! ch=%d, hcchar=0x%x\n",
 				ch_num, hcchar.d32);	
 			break;
 		}
 		count++;
 
 	} while(hcchar.b.chdis);
+	
+	//wait for  Channel Disabled Interrupt
+	count = 0;
+	do {
+	  hcintmsk.d32 = read_reg_32(HCINT(ch_num));
+		
+		if(count > max_error_count) {
+			printk(
+				"Chhltd int never occurred! ch=%d, intreg=0x%x\n",
+				ch_num, hcintmsk.d32);	
+			break;
+		}
+		count++;
+
+	} while(!hcintmsk.b.chhltd);
 	
 	oci_channel_dealloc(ch_num);
 
@@ -453,6 +470,7 @@ int oci_stop_transfer(u8 ch_num)
 	clear_reg_32(HCINTMSK(ch_num), INT_ALL);
 
 	ch_halt =false;
+
 	otg_dbg(OTG_DBG_OCI, 
 		"step2 : oci_stop_transfer ch=%d, hcchar=0x%x\n",
 			ch_num, read_reg_32(HCCHAR(ch_num)));	

@@ -490,16 +490,19 @@ int		s5pc110_otghcd_urb_dequeue(struct usb_hcd *_hcd, struct urb *_urb, int stat
 	int	ret_val = 0;
 	
 	unsigned long	spin_lock_flag = 0;
-	td_t *cancel_td = (td_t *)_urb->hcpriv;
-
-	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
-		"s5pc110_otghcd_urb_dequeue %p, td=%p\n", _urb, cancel_td);	
+	td_t *cancel_td;
 
 	/* Dequeue should be performed only if endpoint is enabled */
 	if (_urb->ep->enabled == 0)
 		return USB_ERR_SUCCESS;
 		
 	spin_lock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
+
+	// kevinh - important to read this from inside of the spinlock (so ISR can't change hcpriv first)
+	cancel_td = (td_t *)_urb->hcpriv;
+
+	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
+		"s5pc110_otghcd_urb_dequeue %p, td=%p\n", _urb, cancel_td);	
 
 	if (cancel_td == NULL)
 	{
@@ -509,8 +512,7 @@ int		s5pc110_otghcd_urb_dequeue(struct usb_hcd *_hcd, struct urb *_urb, int stat
 		return USB_ERR_FAIL;
 	}
 	otg_dbg(OTG_DBG_OTGHCDI_HCD, 
-		"s5pc110_otghcd_urb_dequeue, status = %d\n", status);	
-
+		"s5pc110_otghcd_urb_dequeue, status = %d\n", status);
 
 	ret_val = usb_hcd_check_unlink_urb(_hcd, _urb, status);
         if( (ret_val) && (ret_val != -EIDRM) ){
@@ -544,7 +546,27 @@ int		s5pc110_otghcd_urb_dequeue(struct usb_hcd *_hcd, struct urb *_urb, int stat
 		return USB_ERR_FAIL;
 	}
 
-	otg_usbcore_giveback(cancel_td);
+	if(ret_val == USB_ERR_DEQUEUED) {
+#if 0
+	  if(cancel_td->is_transferring) {
+	    if(cancel_to_transfer_td(cancel_td) != USB_ERR_SUCCESS) { // The ISR will call giveback and delete_td
+	      //printk("ISR was unable to cancel - we'll do it ourselves %p\n", cancel_td);
+	      otg_usbcore_giveback(cancel_td); // FIXME - why is this needed here?
+	      delete_td(cancel_td);
+	    }
+	    // else printk("I assume isr will cancel %p\n", cancel_td);
+	  }
+          else {
+	    otg_usbcore_giveback(cancel_td);
+	    delete_td(cancel_td);
+	  }
+#else
+	    otg_usbcore_giveback(cancel_td);
+	    delete_td(cancel_td);
+#endif
+	}
+	// else printk("Ignoring missing td\n");
+
 	spin_unlock_irq_save_otg(&otg_hcd_spin_lock, spin_lock_flag);
 	return USB_ERR_SUCCESS;
 } 

@@ -436,6 +436,7 @@ void acc_ID_intr_handle(struct work_struct *_work)
 	acc_ID_val = gpio_get_value(GPIO_DOCK_INT);
 	ACC_CONDEV_DBG("GPIO_DOCK_INT is %d",acc_ID_val);
 
+	// FIXME - we should figurout out how to put 2.75V on adc_val
 	if(acc_ID_val!=ACC_STATE)
 	{
 		if(1==acc_ID_val)
@@ -445,13 +446,13 @@ void acc_ID_intr_handle(struct work_struct *_work)
 			acc_notified(false);
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_FALLING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
-		if(intr_count++)
+			// if(intr_count++) - kevinh, I don't think this is correct it causes us to never detach
 			s3c_usb_cable(USB_OTGHOST_DETACHED);
 #endif
 		}
 		else if(0==acc_ID_val)
 		{
-			msleep(420); //workaround for jack
+		  // msleep(420); //workaround for jack
 			ACC_STATE = acc_ID_val;
 			adc_val = connector_detect_change();
 			ACC_CONDEV_DBG("Accessory attached");
