@@ -492,7 +492,7 @@ void acc_ID_intr_handle(struct work_struct *_work)
 			acc_notified(false);
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_FALLING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
-			if(usbmodeChar != 'a') {
+			if(usbmodeChar == 'a') {
 			  // if(intr_count++) - kevinh, I don't think this is correct it causes us to never detach
 			  s3c_usb_cable(USB_OTGHOST_DETACHED);
 			}
@@ -508,7 +508,7 @@ void acc_ID_intr_handle(struct work_struct *_work)
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_RISING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
 		// check USB OTG Host ADC range...
-			if(usbmodeChar != 'a') {
+			if(usbmodeChar == 'a') {
 			  ACC_CONDEV_DBG("kevinh forcing USBOTG");
 			  // kevinh hack if(adc_val > 2700 && adc_val < 2799) {
 			  s3c_usb_cable(USB_OTGHOST_ATTACHED);
