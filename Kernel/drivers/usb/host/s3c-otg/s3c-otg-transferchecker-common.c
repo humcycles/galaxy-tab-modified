@@ -170,9 +170,9 @@ start_do_transfer_checker:
 			otg_usbcore_giveback( done_td);			
 			release_trans_resource(done_td);
 			
-			// kevinh, I suspect that with my fixes the following nasty delay can be removed
 #ifdef CONFIG_CPU_S5PC100
-			udelay(20); /* TODO : remove timing delay */
+			// kevinh, I suspect that with my fixes the following nasty delay can be removed
+			// udelay(20); /* TODO : remove timing delay */
 #else
 //			udelay(20); /* TODO : remove timing delay */
 #endif
