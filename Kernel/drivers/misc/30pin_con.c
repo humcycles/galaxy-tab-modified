@@ -48,7 +48,7 @@ int CONNECTED_DOCK=0;
 // chul2.park
 #ifdef CONFIG_USB_S3C_OTG_HOST
 // workaround for wrong interrupt at boot time :(
-static unsigned int intr_count = 0;
+// static unsigned int intr_count = 0;
 #endif
 
 extern int s3c_adc_get_adc_data(int channel);
@@ -136,6 +136,52 @@ static ssize_t MHD_check_write(struct device *dev, struct device_attribute *attr
 
 static DEVICE_ATTR(MHD_file, S_IRUGO | S_IWUSR | S_IWOTH | S_IXOTH, MHD_check_read, MHD_check_write);
 
+
+#ifdef CONFIG_USB_S3C_OTG_HOST
+/// 'a' for auto, 't' to force target mode, 'h' to force host mode
+static char usbmodeChar = 'a';
+
+static ssize_t usbmode_read(struct device *dev, struct device_attribute *attr, char *buf)
+{
+  const char *msg = "auto";
+  switch(usbmodeChar) {
+  case 't': 
+    msg = "target";
+    break;
+  case 'h': 
+    msg = "host";
+    break;
+  }
+  return sprintf(buf,"%s\n", msg);
+}
+
+static ssize_t usbmode_write(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+        char c;
+	printk("input data --> %s\n", buf);
+	c = buf[0];
+	switch(c) {
+	  case 'a':
+	    usbmodeChar = c;
+	    break;
+	  case 't':
+	    usbmodeChar = c;
+	    s3c_usb_cable(USB_OTGHOST_DETACHED);
+	    break;
+	  case 'h':
+	    usbmodeChar = c;
+	    s3c_usb_cable(USB_OTGHOST_ATTACHED);
+	    break;
+	default:
+	  printk("Ignoring invalid usbmode\n");
+	}
+
+	return size;
+}
+
+// kevinh - Allow changing USB host/target modes on S3C android devices without a special cable
+static DEVICE_ATTR(usbmode, S_IRUGO | S_IWUSR, usbmode_read, usbmode_write);
+#endif
 
 static ssize_t acc_check_read(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -446,8 +492,10 @@ void acc_ID_intr_handle(struct work_struct *_work)
 			acc_notified(false);
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_FALLING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
-			// if(intr_count++) - kevinh, I don't think this is correct it causes us to never detach
-			s3c_usb_cable(USB_OTGHOST_DETACHED);
+			if(usbmodeChar != 'a') {
+			  // if(intr_count++) - kevinh, I don't think this is correct it causes us to never detach
+			  s3c_usb_cable(USB_OTGHOST_DETACHED);
+			}
 #endif
 		}
 		else if(0==acc_ID_val)
@@ -460,10 +508,12 @@ void acc_ID_intr_handle(struct work_struct *_work)
 			set_irq_type(IRQ_DOCK_INT, IRQ_TYPE_EDGE_RISING);
 #ifdef CONFIG_USB_S3C_OTG_HOST
 		// check USB OTG Host ADC range...
-			ACC_CONDEV_DBG("kevinh forcing USBOTG");
-		// kevinh hack if(adc_val > 2700 && adc_val < 2799) {
-			s3c_usb_cable(USB_OTGHOST_ATTACHED);
-			// }
+			if(usbmodeChar != 'a') {
+			  ACC_CONDEV_DBG("kevinh forcing USBOTG");
+			  // kevinh hack if(adc_val > 2700 && adc_val < 2799) {
+			  s3c_usb_cable(USB_OTGHOST_ATTACHED);
+			  // }
+			}
 #endif
 		}
 	}
@@ -607,6 +657,11 @@ static int acc_con_probe(struct platform_device *pdev)
 	if (device_create_file(acc_dev, &dev_attr_acc_file) < 0)
 		printk("Failed to create device file(%s)!\n", dev_attr_acc_file.attr.name);
 	
+#ifdef CONFIG_USB_S3C_OTG_HOST
+	if (device_create_file(acc_dev, &dev_attr_usbmode) < 0)
+		printk("Failed to create device file(%s)!\n", dev_attr_usbmode.attr.name);
+#endif
+
 /*
 	init_timer(&connector_detect_timer);
 	connector_detect_timer.function = acc_con_detect_timer_handler;
