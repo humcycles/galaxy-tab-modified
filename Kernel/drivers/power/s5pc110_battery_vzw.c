@@ -297,7 +297,7 @@ unsigned int charging_mode_get(void)
 
 static int get_usb_power_state(void)
 {
-#if 1 // Mission/kevinh force ac charger detect
+#if 0 // Mission/kevinh force ac charger detect
   return 1;
 #else
 	if(curent_device_type==PM_CHARGER_USB_INSERT)
@@ -1410,7 +1410,9 @@ static bool check_jig_cable(void)
 		acc_id = s3c_bat_get_adc_data(ADC_ACCESSORY_ID);
 		acc_vol = acc_id* 3300 / 4095;
 
-		printk("%s: acc_vol = %d !!\n", __func__, acc_vol);
+		printk("%s: acc_vol = %d (but Mission/kevin lies and claims jig true)!!\n", __func__, acc_vol);
+
+		break; // kevinh mission
 
 		if(acc_vol<2600 || acc_vol > 2900)
 		{
@@ -1424,7 +1426,6 @@ static bool check_jig_cable(void)
 
 static bool check_samsung_charger(void)
 {
-#if 0 // kevinh/Mission - force charging if we see voltage
 	//1.Read ADC value
 	int adc_1, adc_2, vol_1, vol_2;
 	int i = 0;
@@ -1453,10 +1454,6 @@ static bool check_samsung_charger(void)
 	
 	FSA9480_ChangePathToAudio(FALSE);
 	return TRUE;
-#else
-	printk("Mission Motors forced hi-current charging\n");
-	return TRUE;
-#endif
 }
 
 
@@ -1498,6 +1495,7 @@ static void s3c_set_chg_en(int enable)
 	//int chg_en_val = gpio_get_value_ex(gpio_chg_en);
 	int chg_en_val = maxim_chg_status();
 
+	printk("s3c_set_chg_en(%d, %d, dev_typ %d)\n", enable, chg_en_val, curent_device_type);
 	if (enable) {
 		//if (chg_en_val == GPIO_LEVEL_HIGH) {
 		if (chg_en_val) {
@@ -1559,9 +1557,9 @@ static void s3c_set_chg_en(int enable)
 						if(check_jig_cable()==TRUE)
 						{
 							printk("%s: Jig cable insert!! Start high current charging~\n", __func__);
-							smb136_charging(DEVICE_TA);  // Set current to Low
+							smb136_charging(DEVICE_TA);  // Set current to high
 						}	
-						else
+						else 
 							smb136_charging(DEVICE_USB);  // Set current to Low
 					}
 					else	
@@ -2962,7 +2960,8 @@ static void s3c_cable_check_status(void)
 		else
 			status = CHARGER_AC;
 
-#ifdef FEATURE_SPRINT_SLATE
+#if 0 // kevinh - mission always wants to charge
+// #ifdef FEATURE_SPRINT_SLATE
 		if((status == CHARGER_USB)&&(s3c_bat_info.bat_info.batt_slate_mode)){
 			        status = CHARGER_BATTERY;
 			        s3c_set_chg_en(0);					

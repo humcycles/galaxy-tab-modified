@@ -123,11 +123,14 @@ u8 FSA9480_Get_USB_Status(void)
 	
 	usb_state = (device2 << 8) | (device1 << 0);
 	
+	// kevinh - force high current charging (but has unfortunate effect of turning off usb)
+	//return 0;
+
 	if( (device1==FSA9480_DEV_TY1_USB) ||
 			(FSA9480_Get_JIG_Status() && maxim_lpm_chg_status()) )
 		return 1;
 	else
-		return 0;
+	        return 0;
 }
 EXPORT_SYMBOL(FSA9480_Get_USB_Status);
 
