@@ -164,6 +164,7 @@ static int s3c_udc_set_halt(struct usb_ep *_ep, int value);
 static void udc_reinit(struct s3c_udc *dev);
 extern int BOOTUP; // Booting 중인지 아닌지 판단하는 변수, connectivity_switching_init 이 불린 후에 0로 세팅.
 static int g_clocked = 0;
+static int g_otgModeDesired = 0;
 
 
 
@@ -433,15 +434,40 @@ extern void max8998_ldo3_8_control(int enable, unsigned int flag);
 atomic_t g_OtgHostMode;
 extern struct platform_driver s5pc110_otg_driver;
 
-int s3c_is_otgmode()
+int s3c_is_otgmode(void)
 {
-	S3C_UDC_DBG("current = %d\n", atomic_read(&g_OtgHostMode));
+	S3C_UDC_DBG("otgmode = %d\n", atomic_read(&g_OtgHostMode));
 
 	return atomic_read(&g_OtgHostMode);
 }
 
 EXPORT_SYMBOL(s3c_is_otgmode);
+
+void set_otghost_mode(void) {
+  struct s3c_udc *dev = the_controller;
+
+  S3C_UDC_DBG("Setting OTG host mode\n");
+  fsa9480_enable_interrupt(0);
+
+  free_irq(IRQ_OTG, dev);
+
+  // This init is no longer needed - it is done by the target mode driver
+  //max8998_ldo3_8_control(1, LDO_USB);
+  //mdelay(200); // kevinh, was 1 - but give a longer time for the LDO to power up
+  //otg_clock_enable(1);
+
+  if (platform_driver_register(&s5pc110_otg_driver) < 0) 
+    {		
+      S3C_UDC_DBG("platform_driver_register failed...\n");
+      atomic_set(&g_OtgHostMode , 0);
+    }
+  else {
+    S3C_UDC_DBG("platform_driver_register...\n");
+    atomic_set(&g_OtgHostMode , 1);
+  }
+}
 #endif
+
 
 int s3c_usb_cable(int connected)
 {
@@ -474,11 +500,21 @@ int s3c_usb_cable(int connected)
 			otg_clock_enable(1);
 			udc_reinit(dev);
 			udc_enable(dev);
+
+			if(g_otgModeDesired) {
+			  set_otghost_mode();
+			  g_otgModeDesired = 0;
+			}
 			break;
 #ifdef CONFIG_USB_S3C_OTG_HOST
 		case USB_OTGHOST_DETACHED:
 		        S3C_UDC_DBG("USB host mode cable detached...\n");
-		    
+		   
+			if(g_otgModeDesired) {
+			  g_otgModeDesired = 0;
+			  break;
+			}
+
 			otg_clock_enable(0);
 			max8998_ldo3_8_control(0, LDO_USB);
 
@@ -504,22 +540,16 @@ int s3c_usb_cable(int connected)
 			if(!atomic_read(&g_OtgHostMode))
 			{
 				S3C_UDC_DBG("USB Host mode cable attached\n");
-				fsa9480_enable_interrupt(0);
-				free_irq(IRQ_OTG, dev);
 
-				max8998_ldo3_8_control(1, LDO_USB);
-				mdelay(200); // kevinh, was 1 - but give a longer time for the LDO to power up
-				otg_clock_enable(1);
-
-				if (platform_driver_register(&s5pc110_otg_driver) < 0) 
-				{		
-					S3C_UDC_DBG("platform_driver_register failed...\n");
-					atomic_set(&g_OtgHostMode , 0);
+				// If we are not already in USB target mode, that must mean that we just detected the USBID bit but
+				// haven't yet received external power.  In that case, mark that we would like to go into host mode and
+				// wait until we are called with USB_CABLE_ATTACHED.
+				if(!g_clocked) {
+				  S3C_UDC_DBG("Delaying init because we don't see ext power\n");
+				  g_otgModeDesired = 1;
 				}
-				else {
-					S3C_UDC_DBG("platform_driver_register...\n");
-					atomic_set(&g_OtgHostMode , 1);
-				}
+				else
+				  set_otghost_mode();
 			}
 			else {
 				S3C_UDC_DBG("already OtgHost Mode!!~~\n");
