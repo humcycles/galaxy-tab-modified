@@ -197,7 +197,8 @@ void smb136_charging(int source)
 	else if(source ==DEVICE_USB)
 	{
 		// 1. USBIN 500mA mode 
-		data= 0x88;	
+		// kevinh -use HC mode - was data= 0x88;	
+	        data= 0x88; // If 0x88 usb host mode works, if 0x8c we draw high current	
 
 		smb136_i2c_write(smb136_i2c_client,SMB_CommandA, data);
 		udelay(10);
@@ -206,14 +207,19 @@ void smb136_charging(int source)
 		smb136_i2c_write(smb136_i2c_client, SMB_PinControl,0x8);
 		udelay(10);
 
-		smb136_i2c_write(smb136_i2c_client,SMB_CommandA, 0x88);
+		// was 0x88
+		smb136_i2c_write(smb136_i2c_client,SMB_CommandA, data);
 		udelay(10);
 
 		// 3. Set charge current to 500mA
+#if 0 // kevinh/Mission motors force 1.5A charge rate
 #ifdef CONFIG_TARGET_LOCALE_VZW
 		data = 0x12;
 #else
 		data = 0x14;
+#endif
+#else
+		data = 0xf2; // kevinh/Mission copied from the VZW DEVICE_TA clause above? (this value seems fine in all cases)
 #endif
 		smb136_i2c_write(smb136_i2c_client,SMB_ChargeCurrent, data);
 		udelay(10);

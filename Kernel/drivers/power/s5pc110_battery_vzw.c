@@ -33,6 +33,7 @@
 #include <linux/earlysuspend.h>
 #include <linux/io.h>
 #include <mach/regs-clock.h>
+#include <mach/fsa9480_i2c.h>
 #include <asm/gpio.h>
 
 #define DEBUG // kevinh
@@ -1410,9 +1411,7 @@ static bool check_jig_cable(void)
 		acc_id = s3c_bat_get_adc_data(ADC_ACCESSORY_ID);
 		acc_vol = acc_id* 3300 / 4095;
 
-		printk("%s: acc_vol = %d (but Mission/kevin lies and claims jig true)!!\n", __func__, acc_vol);
-
-		break; // kevinh mission
+		printk("%s: acc_vol = %d !!\n", __func__, acc_vol);
 
 		if(acc_vol<2600 || acc_vol > 2900)
 		{
@@ -2961,7 +2960,7 @@ static void s3c_cable_check_status(void)
 			status = CHARGER_AC;
 
 #if 0 // kevinh - mission always wants to charge
-// #ifdef FEATURE_SPRINT_SLATE
+		// #ifdef FEATURE_SPRINT_SLATE
 		if((status == CHARGER_USB)&&(s3c_bat_info.bat_info.batt_slate_mode)){
 			        status = CHARGER_BATTERY;
 			        s3c_set_chg_en(0);					
@@ -3112,6 +3111,7 @@ static irqreturn_t s3c_cable_changed_isr(int irq, void *power_supply)
 }
 #endif
 
+extern int s3c_is_otgmode(void);
 extern int uUSB_check_finished;
 static void cable_timer_func(unsigned long unused)
 {
@@ -3156,6 +3156,7 @@ void s3c_cable_changed(void)
 	//		gpio_get_value(gpio_ta_connected));
 
 	dev_info(dev, "%s: charger changed\n", __func__);
+	printk("kevinh s3c_cable_changed\n");
 
 	if (!s3c_battery_initial)
 		return ;
@@ -3364,6 +3365,7 @@ void check_fullchaged(void)
 #endif
 
 
+
 static void fullcharging_work_handler(struct work_struct * work)
 {
 	unsigned int TA_nSTAT=0, TA_nCHG=0;
@@ -3382,6 +3384,17 @@ static void fullcharging_work_handler(struct work_struct * work)
 				is_fullcharing=1;
 			}
 		}
+
+#ifdef CONFIG_USB_S3C_OTG_HOST
+		// kevinh/Mission
+		printk("ischarging = %d\n", smb136_is_charging_active());
+		if(!smb136_is_charging_active() && s3c_is_otgmode()) {
+		  printk("abandoning host mode due to loss of ext power\n");
+		  // Just lost power, force USB host mode to exit (hack to make sure
+		  // we stop charging
+		  s3c_usb_cable(USB_OTGHOST_DETACHED);
+		}
+#endif
 	}
 	else
 	{

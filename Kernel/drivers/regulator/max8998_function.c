@@ -2913,12 +2913,11 @@ extern u8 FSA9480_Get_JIG_Status(void);
 extern void acc_TA_check(int On);
 #endif
 
-
 void maxim_vac_connect(void)
 {
 	u8 UsbStatus=0;
 
-//	printk("maxim_vac_connect \n");
+	printk("maxim_vac_connect \n");
 	
 //	if(curent_device_type == PM_CHARGER_NULL)
 	{
@@ -2955,7 +2954,7 @@ void maxim_vac_connect(void)
 
 void maxim_vac_disconnect(void)
 {
-	//printk("maxim_vac_disconnect \n");
+	printk("maxim_vac_disconnect \n");
 
 	if(charging_mode_get())
 	{
